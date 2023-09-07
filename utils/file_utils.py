@@ -94,69 +94,26 @@ def GetDepthImgPSL(img):
     depth_img_rgb = np.stack([depth_img_R, depth_img_G, depth_img_B], axis=2)
     return depth_img_rgb.astype(np.uint8)
 
-def WriteDepth(depth, limg, path, name, bf=None):
+def WriteDepth(depth, limg, path, name, bf=None, scale=100):
     if bf is not None:
         bf = float(bf)
-    output_concat_color = os.path.join(path, "concat_color", name)
-    output_resize = os.path.join(path, "resize", name)
-    output_concat_gray = os.path.join(path, "concat_gray", name)
-    output_gray = os.path.join(path, "gray", name)
-    output_gray_scale = os.path.join(path, "gray_scale", name)
+
     output_depth = os.path.join(path, "depth", name)
-    output_depth_psl = os.path.join(path, "depth_psl", name)
-    output_color = os.path.join(path, "color", name)
-    output_concat_depth = os.path.join(path, "concat_depth", name)
-    output_concat = os.path.join(path, "concat", name)
-    MkdirSimple(output_concat_color)
-    MkdirSimple(output_concat_gray)
-    MkdirSimple(output_concat_depth)
-    MkdirSimple(output_gray)
-    MkdirSimple(output_depth)
-    MkdirSimple(output_depth_psl)
-    MkdirSimple(output_color)
-    MkdirSimple(output_concat)
-    MkdirSimple(output_gray_scale)
-    MkdirSimple(output_resize)
-
     predict_np = depth.squeeze()
-    print(predict_np.max(), " ", predict_np.min())
-    predict_scale = (predict_np - np.min(predict_np))* 255 / (np.max(predict_np) - np.min(predict_np))
-
-    predict_scale = predict_scale.astype(np.uint8)
-    predict_np_int = predict_scale
-    color_img = cv2.applyColorMap(predict_np_int, cv2.COLORMAP_HOT)
-    limg_cv = limg
-    concat_img_color = np.vstack([limg_cv, color_img])
-    predict_np_rgb = np.stack([predict_np, predict_np, predict_np], axis=2)
-    concat_img_gray = np.vstack([limg_cv, predict_np_rgb])
-
+    print(predict_np.shape)
+    MkdirSimple(output_depth)
+    print(np.min(predict_np), np.max(predict_np))
     # get depth
-    depth_img_rgb = GetDepthImg(predict_np)
     if bf is not None:
-        depth_img_rgb_psl = bf / predict_np
-        depth_img_rgb_psl = GetDepthImgPSL(depth_img_rgb_psl)
-        cv2.imwrite(output_depth_psl, depth_img_rgb_psl)
+        depth_img_depth = bf / predict_np * scale
+        print(np.min(depth_img_depth), np.max(depth_img_depth))
+
+        depth_img_depth[depth_img_depth < 0] = 0
+        depth_img_depth[depth_img_depth > 65535] = 65535
+        print(depth_img_depth.shape, output_depth)
+        cv2.imwrite(output_depth, depth_img_depth.astype(np.uint16))
     else:
-        print("Warning bf is None, please confirm bf is right!")
-        depth_img_rgb_psl = GetDepthImgPSL(predict_np)
-        cv2.imwrite(output_depth_psl, depth_img_rgb_psl)
-    concat_img_depth = np.vstack([limg_cv, depth_img_rgb])
-    concat = np.hstack([np.vstack([limg_cv, color_img]), np.vstack([predict_np_rgb, depth_img_rgb])])
-
-    cv2.imwrite(output_concat_color, concat_img_color)
-    cv2.imwrite(output_concat_gray, concat_img_gray)
-    cv2.imwrite(output_color, color_img)
-
-    predict_np_gray_scale = predict_np * 3
-    cv2.imwrite(output_gray_scale, predict_np_gray_scale)
-    cv2.imwrite(output_gray, np.squeeze(predict_np))
-    print(predict_np.shape, np.squeeze(predict_np).shape)
-    cv2.imwrite(output_depth, depth_img_rgb)
-
-    cv2.imwrite(output_concat_depth, concat_img_depth)
-    cv2.imwrite(output_concat, concat)
-    cv2.imwrite(output_resize, limg)
-
+        assert 0, "please confirm bf parameter"
 def get_last_name(file_name):
     if file_name is not None:
         return file_name.split("/")[-1].split(".")[0]
