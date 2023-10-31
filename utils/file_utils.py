@@ -148,6 +148,8 @@ def WriteDepth(depth, limg, path, name, bf=None):
     cv2.imwrite(output_color, color_img)
 
     predict_np_gray_scale = predict_np * 256
+    predict_np_gray_scale[predict_np_gray_scale < 0] = 0
+    predict_np_gray_scale[predict_np_gray_scale > 65535] = 65535
     cv2.imwrite(output_disp_scale, predict_np_gray_scale.astype(np.uint16))
     cv2.imwrite(output_disp, np.squeeze(predict_np))
     print(predict_np.shape, np.squeeze(predict_np).shape)
